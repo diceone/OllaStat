@@ -21,6 +21,8 @@ targets:
       - OllaStat
       - path: OllaStat/Resources/AppIcon.icns
         buildPhase: resources
+      - path: LICENSE
+        buildPhase: resources
     info:
       path: OllaStat/Info.plist
       properties:
