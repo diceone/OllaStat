@@ -22,6 +22,14 @@ Ollama bietet aktuell **keine offizielle API** für Account-Nutzungswerte (siehe
 
 > ⚠️ **Disclaimer:** Inoffizielles Werkzeug, nicht mit Ollama verbunden. Der Abruf kann brechen, wenn Ollama die Settings-Seite ändert. Der Cookie ermöglicht vollen Zugriff auf deine Sitzung — OllaStat speichert ihn ausschließlich lokal im Schlüsselbund und sendet ihn **nur** an ollama.com.
 
+## Lizenz
+
+OllaStat steht unter der **[PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0)**:
+
+- ✅ **Erlaubt:** Kopieren, Modifizieren, Weitergeben und Nutzung für persönliche/nicht-kommerzielle Zwecke (Hobby, Studium, Forschung, gemeinnützige Organisationen …)
+- ❌ **Verboten:** Kommerzielle Nutzung — mit der Software darf niemand Geld verdienen (Verkauf, SaaS, bezahlte Distribution, Nutzung im kommerziellen Arbeitsumfeld)
+- Kommerzielle Rechte bleiben beim Autor. Anfragen für kommerzielle Lizenzen bitte über [GitHub Issues](https://github.com/diceone/OllaStat/issues)
+
 ## Setup
 
 **Fertige Builds gibt es in den [GitHub Releases](https://github.com/diceone/OllaStat/releases) (DMG) oder per Homebrew:**
