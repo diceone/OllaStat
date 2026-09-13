@@ -24,7 +24,13 @@ Ollama bietet aktuell **keine offizielle API** für Account-Nutzungswerte (siehe
 
 ## Setup
 
-**Fertige Builds gibt es in den [GitHub Releases](https://github.com/diceone/OllaStat/releases) (DMG).** Die App ist nicht notarisiert — beim ersten Start ggf. Rechtsklick → *Öffnen* oder `xattr -cr /Applications/OllaStat.app`.
+**Fertige Builds gibt es in den [GitHub Releases](https://github.com/diceone/OllaStat/releases) (DMG) oder per Homebrew:**
+
+```bash
+brew install --cask diceone/tap/ollastat
+```
+
+Die App ist nicht notarisiert — beim ersten Start ggf. Rechtsklick → *Öffnen* oder `xattr -dr com.apple.quarantine /Applications/OllaStat.app`.
 
 1. **In-App-Anmeldung:** OllaStat → Menüleiste → **Einstellungen** → **„Bei ollama.com anmelden …"** → im eingebetteten Browserfenster anmelden (z. B. mit GitHub). OllaStat fängt das Session-Cookie automatisch ab, prüft es und speichert es im Schlüsselbund — nichts kopieren.
 
