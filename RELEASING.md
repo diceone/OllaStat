@@ -38,11 +38,12 @@ Voraussetzungen dafür:
 
 ```bash
 # generate_keys aus dem Sparkle-Release laden (Sparkle-for-Swift-Package-Manager.zip → bin/)
-./generate_keys
-# → Public Key (SUPublicEDKey) ausgeben lassen und später in project.yml (Info-Properties) eintragen
-# → Private Key exportieren:
-./generate_keys -x sparkledsa_priv.txt   # Export-Flag siehe ./generate_keys --help
-base64 < sparkledsa_priv.txt   # Ausgabe als GitHub-Secret SPARKLE_ED_PRIVATE_KEY hinterlegen
+./generate_keys --account ollastat
+# → Public Key ausgeben lassen (SUPublicEDKey) und in project.yml (Info-Properties) eintragen
+./generate_keys -p --account ollastat
+# → Private Key exportieren (Datei enthält base64 — genau dieser Inhalt ist das Secret):
+./generate_keys -x sparkledsa_priv.txt --account ollastat
+gh secret set SPARKLE_ED_PRIVATE_KEY < sparkledsa_priv.txt
 ```
 
 Der **Private Key ist das Signier-Geschäft**: Wer ihn hat, kann Updates unterschieben.

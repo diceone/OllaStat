@@ -64,7 +64,7 @@ jobs:
         run: |
           curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/2.9.6/Sparkle-for-Swift-Package-Manager.zip" -o sparkle.zip
           unzip -q -o sparkle.zip -d sparkle-tools
-          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | base64 --decode > ed_private_key
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" > ed_private_key
           chmod 600 ed_private_key
           VERSION="${GITHUB_REF_NAME#v}"
           SIGNATURE=$("./sparkle-tools/bin/sign_update" --ed-key-file ed_private_key "OllaStat-$VERSION.dmg" | grep -o 'sparkle:edSignature="[^"]*"' | sed 's/sparkle:edSignature="//;s/"$//')
