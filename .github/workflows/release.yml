@@ -55,6 +55,8 @@ jobs:
           cp -R "${{ steps.app.outputs.path }}" "$STAGE/"
           ln -s /Applications "$STAGE/Applications"
           hdiutil create -volname "OllaStat $VERSION" -srcfolder "$STAGE" -ov -format UDZO "OllaStat-$VERSION.dmg"
+          echo "length=$(stat -f%z "OllaStat-$VERSION.dmg")" >> "$GITHUB_OUTPUT"
+        id: dmg
 
       - name: Sign DMG with Sparkle (EdDSA)
         id: sparkle
@@ -75,7 +77,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           DATE=$(date -R)
           SIG="${{ steps.sparkle.outputs.signature }}"
-          LEN="${{ steps.sparkle.outputs.length }}"
+          LEN="${{ steps.dmg.outputs.length }}"
           cat > appcast.xml <<EOF
           <?xml version="1.0" standalone="yes"?>
           <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
