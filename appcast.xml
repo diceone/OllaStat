@@ -11,7 +11,7 @@
       <sparkle:version>2</sparkle:version>
       <sparkle:shortVersionString>0.1.1</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/diceone/OllaStat/releases/download/v0.1.1/OllaStat-0.1.1.dmg" length="0" type="application/x-bzip2-diskimage" sparkle:edSignature="" />
+      <enclosure url="https://github.com/diceone/OllaStat/releases/download/v0.1.1/OllaStat-0.1.1.dmg" length="1764472" type="application/x-bzip2-diskimage" sparkle:edSignature="NGPNcVgY6lTblSMYtbdn/2+IDtqMwx2YmZ/WhIitLl1aOfzwbcNCFYZUthuS1E8FjsMOMtjDbF3ZuMtGvnAuCQ==" />
     </item>
   </channel>
 </rss>
