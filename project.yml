@@ -1,0 +1,71 @@
+name: OllaStat
+options:
+  bundleIdPrefix: com.diceone
+  deploymentTarget:
+    macOS: "14.0"
+  createIntermediateGroups: true
+
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGNING_REQUIRED: NO
+    GENERATE_INFOPLIST_FILE: NO
+
+targets:
+  OllaStat:
+    type: application
+    platform: macOS
+    sources:
+      - OllaStat
+      - path: OllaStat/Resources/AppIcon.icns
+        buildPhase: resources
+    info:
+      path: OllaStat/Info.plist
+      properties:
+        CFBundleDisplayName: OllaStat
+        CFBundleName: OllaStat
+        CFBundleIconFile: AppIcon
+        CFBundleShortVersionString: "0.1.0"
+        CFBundleVersion: "1"
+        LSUIElement: true
+        LSMinimumSystemVersion: "14.0"
+        NSPrincipalClass: NSApplication
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.diceone.ollastat
+        ENABLE_HARDENED_RUNTIME: YES
+
+  OllaStatTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - path: Tests/UnitTests
+      - path: Tests/Fixtures
+        buildPhase: resources
+    info:
+      path: Tests/Info.plist
+      properties: {}
+    dependencies:
+      - target: OllaStat
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.diceone.ollastat.tests
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/OllaStat.app/Contents/MacOS/OllaStat"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+
+schemes:
+  OllaStat:
+    build:
+      targets:
+        OllaStat: all
+        OllaStatTests: [test]
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - OllaStatTests
