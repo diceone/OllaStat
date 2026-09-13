@@ -173,17 +173,41 @@ final class UsageMonitor: ObservableObject {
     // MARK: - Menu bar label
 
     var menuBarLabel: String {
-        let prefix = "🦙"
         switch state {
         case .idle, .loading:
-            return usageData.map { label(from: $0) } ?? prefix
+            return usageData.map { label(from: $0) } ?? "🦙"
         case .loaded(let data):
             return label(from: data)
         case .needsAuth:
-            return "\(prefix) !"
+            return "🦙 !"
         case .failed:
-            return usageData.map { label(from: $0) } ?? prefix
+            return usageData.map { label(from: $0) } ?? "🦙"
         }
+    }
+
+    /// Text shown next to the template llama in the menu bar.
+    var menuBarText: String {
+        switch state {
+        case .idle, .loading:
+            return usageData.map { percentText(from: $0) } ?? ""
+        case .loaded(let data):
+            return percentText(from: data)
+        case .needsAuth:
+            return "!"
+        case .failed:
+            return usageData.map { percentText(from: $0) } ?? ""
+        }
+    }
+
+    private func percentText(from data: UsageData) -> String {
+        var parts: [String] = []
+        if let fiveHour = data.window(.fiveHour) {
+            parts.append(formatPercent(fiveHour.percentUsed))
+        }
+        if AppSettings.shared.showWeeklyInMenuBar, let weekly = data.window(.weekly) {
+            parts.append(formatPercent(weekly.percentUsed))
+        }
+        return parts.joined(separator: " · ")
     }
 
     private func label(from data: UsageData) -> String {

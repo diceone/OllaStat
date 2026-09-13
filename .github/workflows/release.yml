@@ -1,0 +1,135 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+
+env:
+  SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+  TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+  # SPM klont in Bare-Repos; neuere git-Defaults blockieren das sonst.
+  GIT_CONFIG_COUNT: 1
+  GIT_CONFIG_KEY_0: safe.bareRepository
+  GIT_CONFIG_VALUE_0: all
+
+jobs:
+  release:
+    name: Build, DMG, Release, AppCast
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (Release)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project OllaStat.xcodeproj \
+            -scheme OllaStat \
+            -configuration Release \
+            build 2>&1 | tail -30
+
+      - name: Locate built app
+        id: app
+        run: |
+          APP=$(find "$HOME/Library/Developer/Xcode/DerivedData" -type d -name "OllaStat.app" -path "*Release*" | head -1)
+          echo "path=$APP" >> "$GITHUB_OUTPUT"
+          echo "build=$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$APP/Contents/Info.plist")" >> "$GITHUB_OUTPUT"
+          echo "version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")" >> "$GITHUB_OUTPUT"
+
+      - name: Assemble DMG
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          STAGE=$(mktemp -d)
+          cp -R "${{ steps.app.outputs.path }}" "$STAGE/"
+          ln -s /Applications "$STAGE/Applications"
+          hdiutil create -volname "OllaStat $VERSION" -srcfolder "$STAGE" -ov -format UDZO "OllaStat-$VERSION.dmg"
+
+      - name: Sign DMG with Sparkle (EdDSA)
+        id: sparkle
+        if: env.SPARKLE_ED_PRIVATE_KEY != ''
+        run: |
+          curl -sL "https://github.com/sparkle-project/Sparkle/releases/download/2.9.6/Sparkle-for-Swift-Package-Manager.zip" -o sparkle.zip
+          unzip -q -o sparkle.zip -d sparkle-tools
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | base64 --decode > ed_private_key
+          chmod 600 ed_private_key
+          VERSION="${GITHUB_REF_NAME#v}"
+          SIGNATURE=$("./sparkle-tools/bin/sign_update" --ed-key-file ed_private_key "OllaStat-$VERSION.dmg" | grep -o 'sparkle:edSignature="[^"]*"' | sed 's/sparkle:edSignature="//;s/"$//')
+          LENGTH=$(stat -f%z "OllaStat-$VERSION.dmg")
+          echo "signature=$SIGNATURE" >> "$GITHUB_OUTPUT"
+          echo "length=$LENGTH" >> "$GITHUB_OUTPUT"
+
+      - name: Write appcast.xml
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          DATE=$(date -R)
+          SIG="${{ steps.sparkle.outputs.signature }}"
+          LEN="${{ steps.sparkle.outputs.length }}"
+          cat > appcast.xml <<EOF
+          <?xml version="1.0" standalone="yes"?>
+          <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+            <channel>
+              <title>OllaStat</title>
+              <link>https://github.com/diceone/OllaStat</link>
+              <description>Ollama Cloud Token-Verbrauch in der macOS-Menüleiste</description>
+              <language>de</language>
+              <item>
+                <title>Version $VERSION</title>
+                <pubDate>$DATE</pubDate>
+                <sparkle:version>${{ steps.app.outputs.build }}</sparkle:version>
+                <sparkle:shortVersionString>$VERSION</sparkle:shortVersionString>
+                <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+                <enclosure url="https://github.com/diceone/OllaStat/releases/download/${GITHUB_REF_NAME}/OllaStat-$VERSION.dmg" length="${LEN:-0}" type="application/x-bzip2-diskimage" sparkle:edSignature="$SIG" />
+              </item>
+            </channel>
+          </rss>
+          EOF
+
+      - name: Commit appcast to main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add appcast.xml
+          git commit -m "Update appcast for ${GITHUB_REF_NAME} [skip ci]" || echo "No appcast changes"
+          git push origin HEAD:main
+
+      - name: Extract release notes
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          awk -v ver="## $VERSION" 'index($0, ver) == 1 {flag=1; next} /^## / && flag {exit} flag' CHANGELOG.md > release-notes.md
+          head -40 release-notes.md
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          gh release create "${GITHUB_REF_NAME}" "OllaStat-$VERSION.dmg" \
+            --title "OllaStat $VERSION" \
+            --notes-file release-notes.md
+
+      - name: Update Homebrew tap
+        if: env.TAP_TOKEN != ''
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          SHA=$(shasum -a 256 "OllaStat-$VERSION.dmg" | awk '{print $1}')
+          git clone "https://x-access-token:${TAP_TOKEN}@github.com/diceone/homebrew-tap.git" tap
+          cd tap
+          sed -i '' "s/version \".*\"/version \"$VERSION\"/" Casks/ollastat.rb
+          sed -i '' "s/sha256 \".*\"/sha256 \"$SHA\"/" Casks/ollastat.rb
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "OllaStat $VERSION"
+          git push

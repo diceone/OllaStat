@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build & Test (macOS)
+    runs-on: macos-latest
+    env:
+      # SPM klont in Bare-Repos; neuere git-Defaults blockieren das sonst.
+      GIT_CONFIG_COUNT: 1
+      GIT_CONFIG_KEY_0: safe.bareRepository
+      GIT_CONFIG_VALUE_0: all
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install xcodegen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project OllaStat.xcodeproj \
+            -scheme OllaStat \
+            -destination 'platform=macOS' \
+            test 2>&1 | tail -50

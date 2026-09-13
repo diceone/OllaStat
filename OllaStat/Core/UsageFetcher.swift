@@ -27,6 +27,7 @@ final class UsageFetcher {
         var timeout: TimeInterval = 15
         var userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
         var cookieName = "__Secure-session"
+        var protocolClasses: [AnyClass]? = nil
     }
 
     let configuration: Configuration
@@ -39,6 +40,7 @@ final class UsageFetcher {
         let config = URLSessionConfiguration.ephemeral
         config.timeoutIntervalForRequest = configuration.timeout
         config.timeoutIntervalForResource = configuration.timeout * 2
+        config.protocolClasses = configuration.protocolClasses
         session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
     }
 
@@ -73,6 +75,16 @@ final class UsageFetcher {
 
         if http.statusCode == 401 || http.statusCode == 403 {
             throw FetchFailure.sessionExpired
+        }
+        if (300..<400).contains(http.statusCode) {
+            // URLProtocol-basierte Antworten (Tests) durchlaufen den Redirect-Delegate
+            // nicht — deshalb auch die 3xx-Antwort selbst prüfen.
+            let location = http.allHeaderFields.reduce("") { partial, pair in
+                (pair.key as? String)?.lowercased() == "location" ? (pair.value as? String ?? "") : partial
+            }.lowercased()
+            if location.contains("signin") || response.url?.path.lowercased().contains("signin") == true {
+                throw FetchFailure.sessionExpired
+            }
         }
         guard http.statusCode == 200 else {
             throw FetchFailure.http(status: http.statusCode)

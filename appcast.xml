@@ -1,0 +1,17 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">
+  <channel>
+    <title>OllaStat</title>
+    <link>https://github.com/diceone/OllaStat</link>
+    <description>Ollama Cloud Token-Verbrauch in der macOS-Menüleiste</description>
+    <language>de</language>
+    <item>
+      <title>Version 0.1.1</title>
+      <pubDate>Sat, 13 Sep 2026 12:00:00 +0200</pubDate>
+      <sparkle:version>2</sparkle:version>
+      <sparkle:shortVersionString>0.1.1</sparkle:shortVersionString>
+      <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+      <enclosure url="https://github.com/diceone/OllaStat/releases/download/v0.1.1/OllaStat-0.1.1.dmg" length="0" type="application/x-bzip2-diskimage" sparkle:edSignature="" />
+    </item>
+  </channel>
+</rss>

@@ -1,8 +1,15 @@
+import Sparkle
 import SwiftUI
 import AppKit
 import UserNotifications
 
 final class AppDelegate: NSObject, NSApplicationDelegate, UNUserNotificationCenterDelegate {
+    let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
         Task { @MainActor in
@@ -32,7 +39,12 @@ struct OllaStatApp: App {
                 .environmentObject(settings)
                 .frame(width: 360)
         } label: {
-            Text(monitor.menuBarLabel)
+            HStack(spacing: 2) {
+                Image("MenuBarIcon")
+                if !monitor.menuBarText.isEmpty {
+                    Text(monitor.menuBarText)
+                }
+            }
         }
         .menuBarExtraStyle(.window)
 

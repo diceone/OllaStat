@@ -85,6 +85,15 @@ struct SettingsView: View {
                         launchAtLogin = settings.launchAtLoginEnabled
                     }
                 ))
+                Button {
+                    guard let appDelegate = NSApp.delegate as? AppDelegate else { return }
+                    appDelegate.updaterController.checkForUpdates(nil)
+                } label: {
+                    Label("Nach Updates suchen …", systemImage: "arrow.down.circle")
+                }
+                Text("Updates werden automatisch geprüft und über Sparkle installiert.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             } header: {
                 Text("Allgemein")
             } footer: {
