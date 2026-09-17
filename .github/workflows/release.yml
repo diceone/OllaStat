@@ -116,10 +116,19 @@ jobs:
         if: env.NOTARY_API_KEY != ''
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
-          xcrun stapler staple "OllaStat-$VERSION.dmg"
-          xcrun stapler validate "OllaStat-$VERSION.dmg"
+          DMG="OllaStat-$VERSION.dmg"
+          # Das Notarization-Ticket braucht nach notarytool --wait oft noch
+          # einige Sekunden, bis der CloudKit-Query es findet → Retry mit Backoff
+          ok=false
+          for i in $(seq 1 6); do
+            if xcrun stapler staple "$DMG"; then ok=true; break; fi
+            echo "Staple-Versuch $i fehlgeschlagen — warte 30s auf Ticket-Propagation…"
+            sleep 30
+          done
+          $ok || exit 1
+          xcrun stapler validate "$DMG"
           # Länge kann sich durch das Stapeln ändern
-          echo "length=$(stat -f%z "OllaStat-$VERSION.dmg")" >> "$GITHUB_OUTPUT"
+          echo "length=$(stat -f%z "$DMG")" >> "$GITHUB_OUTPUT"
         id: staple
 
       - name: Sign DMG with Sparkle (EdDSA)
