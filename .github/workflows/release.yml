@@ -76,17 +76,13 @@ jobs:
         if: env.MACOS_CERTIFICATE != ''
         run: |
           APP="${{ steps.app.outputs.path }}"
-          # Innerste Bundles zuerst (-depth), dann die App; Entitlements der
-          # Sparkle-Komponenten bleiben erhalten
-          find "$APP/Contents" -depth \( -name "*.framework" -o -name "*.app" -o -name "*.xpc" \) | while read -r BUNDLE; do
-            codesign --force --options runtime --timestamp \
-              --preserve-metadata=entitlements \
-              --sign "Developer ID Application" "$BUNDLE"
-          done
-          codesign --force --options runtime --timestamp \
-            --sign "Developer ID Application" \
-            --entitlements "$(pwd)/OllaStat/App/OllaStat.entitlements" \
-            "$APP"
+          # --deep signiert auch verschachtelte nackte Binaries (z. B. Sparkles
+          # Autoupdate), die per find *.framework/*.app/*.xpc nicht erfasst
+          # würden; --preserve-metadata=entitlements bewahrt die Entitlements
+          # der Sparkle-Komponenten
+          codesign --force --deep --options runtime --timestamp \
+            --preserve-metadata=entitlements \
+            --sign "Developer ID Application" "$APP"
           codesign --verify --strict --verbose=2 "$APP"
           codesign --verify --deep --strict "$APP"
 
@@ -104,13 +100,22 @@ jobs:
         if: env.NOTARY_API_KEY != ''
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
+          DMG="OllaStat-$VERSION.dmg"
           mkdir -p private_keys
           printf '%s' "$NOTARY_API_KEY" | base64 --decode > "private_keys/AuthKey_${NOTARY_KEY_ID}.p8"
-          xcrun notarytool submit "OllaStat-$VERSION.dmg" \
+          # notarytool --wait liefert bei Invalid leider Exit 0 → Status explizit prüfen
+          OUT=$(xcrun notarytool submit "$DMG" \
             --key "private_keys/AuthKey_${NOTARY_KEY_ID}.p8" \
             --key-id "$NOTARY_KEY_ID" \
             --issuer "$NOTARY_ISSUER_ID" \
-            --wait
+            --wait --output-format json)
+          echo "$OUT" | python3 -m json.tool
+          STATUS=$(echo "$OUT" | python3 -c 'import json,sys; print(json.load(sys.stdin)["status"])')
+          if [ "$STATUS" != "Accepted" ]; then
+            echo "::error::Notarisierung nicht akzeptiert (status=$STATUS)"
+            echo "$OUT" | python3 -c 'import json,sys; [print(i.get("path","?"), "->", i.get("message","?")) for i in json.load(sys.stdin).get("issues",[])]'
+            exit 1
+          fi
 
       - name: Staple DMG
         if: env.NOTARY_API_KEY != ''
