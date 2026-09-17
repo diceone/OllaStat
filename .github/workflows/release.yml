@@ -13,6 +13,13 @@ concurrency:
 env:
   SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
   TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+  # Signierung & Notarisierung (alles optional — ohne Secrets läuft der Build unsigniert)
+  MACOS_CERTIFICATE: ${{ secrets.MACOS_CERTIFICATE }}          # base64 der Developer-ID-.p12
+  MACOS_CERTIFICATE_PWD: ${{ secrets.MACOS_CERTIFICATE_PWD }}  # Passwort der .p12
+  APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+  NOTARY_KEY_ID: ${{ secrets.NOTARY_KEY_ID }}                  # App Store Connect API-Key
+  NOTARY_ISSUER_ID: ${{ secrets.NOTARY_ISSUER_ID }}
+  NOTARY_API_KEY: ${{ secrets.NOTARY_API_KEY }}                # base64 der AuthKey_<ID>.p8
   # SPM klont in Bare-Repos; neuere git-Defaults blockieren das sonst.
   GIT_CONFIG_COUNT: 1
   GIT_CONFIG_KEY_0: safe.bareRepository
@@ -48,6 +55,38 @@ jobs:
           echo "build=$(/usr/libexec/PlistBuddy -c 'Print CFBundleVersion' "$APP/Contents/Info.plist")" >> "$GITHUB_OUTPUT"
           echo "version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' "$APP/Contents/Info.plist")" >> "$GITHUB_OUTPUT"
 
+      - name: Import Developer ID certificate
+        if: env.MACOS_CERTIFICATE != ''
+        run: |
+          CERT_PATH=$(mktemp -d)/certificate.p12
+          printf '%s' "$MACOS_CERTIFICATE" | base64 --decode > "$CERT_PATH"
+          KEYCHAIN_DB=$(mktemp -d)/build.keychain-db
+          KEYCHAIN_PWD=$(openssl rand -hex 16)
+          security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_DB"
+          security default-keychain -s "$KEYCHAIN_DB"
+          security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN_DB"
+          security import "$CERT_PATH" -k "$KEYCHAIN_DB" -P "$MACOS_CERTIFICATE_PWD" -T /usr/bin/codesign -T /usr/bin/security
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k "$KEYCHAIN_PWD" "$KEYCHAIN_DB"
+          security set-keychain-settings -t 3600 "$KEYCHAIN_DB"
+          echo "keychain=$KEYCHAIN_DB" >> "$GITHUB_OUTPUT"
+          echo "identity=Developer ID Application: ($APPLE_TEAM_ID)" >> "$GITHUB_OUTPUT"
+        id: cert
+
+      - name: Codesign app (Developer ID + Hardened Runtime)
+        if: env.MACOS_CERTIFICATE != ''
+        run: |
+          APP="${{ steps.app.outputs.path }}"
+          # Verschachtelte Sparkle-Komponenten zuerst, dann die App
+          find "$APP/Contents" -name "*.framework" -o -name "*.app" -o -name "*.xpc" | while read -r BUNDLE; do
+            codesign --force --options runtime --timestamp \
+              --sign "Developer ID Application" "$BUNDLE"
+          done
+          codesign --force --options runtime --timestamp \
+            --sign "Developer ID Application" \
+            --entitlements "$(pwd)/OllaStat/App/OllaStat.entitlements" \
+            "$APP"
+          codesign --verify --strict --verbose=2 "$APP"
+
       - name: Assemble DMG
         run: |
           VERSION="${GITHUB_REF_NAME#v}"
@@ -57,6 +96,28 @@ jobs:
           hdiutil create -volname "OllaStat $VERSION" -srcfolder "$STAGE" -ov -format UDZO "OllaStat-$VERSION.dmg"
           echo "length=$(stat -f%z "OllaStat-$VERSION.dmg")" >> "$GITHUB_OUTPUT"
         id: dmg
+
+      - name: Notarize DMG
+        if: env.NOTARY_API_KEY != ''
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          mkdir -p private_keys
+          printf '%s' "$NOTARY_API_KEY" | base64 --decode > "private_keys/AuthKey_${NOTARY_KEY_ID}.p8"
+          xcrun notarytool submit "OllaStat-$VERSION.dmg" \
+            --key "private_keys/AuthKey_${NOTARY_KEY_ID}.p8" \
+            --key-id "$NOTARY_KEY_ID" \
+            --issuer "$NOTARY_ISSUER_ID" \
+            --wait
+
+      - name: Staple DMG
+        if: env.NOTARY_API_KEY != ''
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          xcrun stapler staple "OllaStat-$VERSION.dmg"
+          xcrun stapler validate "OllaStat-$VERSION.dmg"
+          # Länge kann sich durch das Stapeln ändern
+          echo "length=$(stat -f%z "OllaStat-$VERSION.dmg")" >> "$GITHUB_OUTPUT"
+        id: staple
 
       - name: Sign DMG with Sparkle (EdDSA)
         id: sparkle
@@ -77,7 +138,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           DATE=$(date -R)
           SIG="${{ steps.sparkle.outputs.signature }}"
-          LEN="${{ steps.dmg.outputs.length }}"
+          LEN="${{ steps.staple.outputs.length || steps.dmg.outputs.length }}"
           cat > appcast.xml <<EOF
           <?xml version="1.0" standalone="yes"?>
           <rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" xmlns:dc="http://purl.org/dc/elements/1.1/" version="2.0">

@@ -33,6 +33,47 @@ Voraussetzungen dafür:
 |---|---|---|
 | `SPARKLE_ED_PRIVATE_KEY` | Base64-Export des Sparkle-EdDSA-Private-Keys → signierte DMGs im AppCast | Empfohlen, sobald Updates ausgerollt werden |
 | `TAP_TOKEN` | GitHub-PAT (Scope `repo`) für Pushes auf `diceone/homebrew-tap` → automatischer Cask-Bump | Optional, sonst manueller Bump |
+| `MACOS_CERTIFICATE` | Base64 der **Developer ID Application**-.p12 → signiert die App (Hardened Runtime) | Optional, ohne bleibt die App unsigniert (Gatekeeper-Warnung) |
+| `MACOS_CERTIFICATE_PWD` | Passwort der .p12-Datei | Mit MACOS_CERTIFICATE |
+| `APPLE_TEAM_ID` | 10-stellige Team-ID (für Keychain-/Cert-Referenz) | Mit MACOS_CERTIFICATE |
+| `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`, `NOTARY_API_KEY` | App-Store-Connect-API-Key → notarisiert + stapelt die DMG | Optional, ohne keine Notarisierung |
+
+## Signierung & Notarisierung
+
+Ohne Signierung zeigt macOS beim ersten Start „nicht verifiziert"-Warnungen
+(Rechtsklick → Öffnen bzw. `xattr`). Mit Developer-ID-Zertifikat + Notarisierung
+läuft die App wie jede Mac-App aus dem Internet — und Brew-Installationen sind sauber verifizierbar.
+
+### 1. Zertifikat erstellen (einmalig)
+
+1. Mitgliedschaft im **Apple Developer Program** ($99/Jahr, [developer.apple.com](https://developer.apple.com/programs))
+2. Xcode → Settings → Accounts → Team wählen → **Manage Certificates** → `+` → **Developer ID Application**
+3. Schlüsselbundzugriff: Zertifikat + privater Schlüssel exportieren (.p12, mit Passwort)
+4. Als Secrets hinterlegen:
+
+```bash
+base64 -i DeveloperIDApplication.p12 | pbcopy   # → GitHub-Secret MACOS_CERTIFICATE
+# Passwort → MACOS_CERTIFICATE_PWD, Team-ID (Xcode → Accounts) → APPLE_TEAM_ID
+```
+
+### 2. Notarisierungs-Key erstellen (einmalig)
+
+1. [appstoreconnect.apple.com](https://appstoreconnect.apple.com) → Users and Access → Integrations → **App Store Connect API** → Team Keys → Neuen Key generieren (Rolle egal, Notarisierung braucht keine)
+2. `.p8`-Datei herunterladen (**nur einmal möglich!**) + Key-ID und Issuer-ID notieren
+3. Secrets: `NOTARY_API_KEY` = `base64 -i AuthKey_XXX.p8`, `NOTARY_KEY_ID`, `NOTARY_ISSUER_ID`
+
+Die CI signiert die App (Developer ID, Hardened Runtime, Timestamp), notarisiert
+die DMG via `notarytool --wait` und stapelt sie (`stapler staple`). Danach
+signiert Sparkle den AppCast-Eintrag — alles automatisch beim Tag-Push.
+
+### 3. Lokal testen
+
+```bash
+codesign --force --options runtime --timestamp \
+  --sign "Developer ID Application" --entitlements OllaStat/App/OllaStat.entitlements \
+  build/OllaStat.app
+codesign --verify --strict build/OllaStat.app && codesign -dv build/OllaStat.app
+spctl assess --type execute build/OllaStat.app   # „accepted" nach Notarisierung
 
 ### Sparkle-Keys erzeugen
 
