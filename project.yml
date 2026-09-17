@@ -34,8 +34,8 @@ targets:
         CFBundleDisplayName: OllaStat
         CFBundleName: OllaStat
         CFBundleIconFile: AppIcon
-        CFBundleShortVersionString: "0.1.1"
-        CFBundleVersion: "2"
+        CFBundleShortVersionString: "0.1.2"
+        CFBundleVersion: "3"
         LSUIElement: true
         LSMinimumSystemVersion: "14.0"
         NSPrincipalClass: NSApplication

@@ -3,6 +3,15 @@
 Alle nennenswerten Änderungen an OllaStat werden hier dokumentiert.
 Format angelehnt an [Keep a Changelog](https://keepachangelog.com/de/1.1.0/).
 
+## 0.1.2 – 2026-09-17
+
+### Neu
+- **Signierung & Notarisierung**: Releases werden ab dieser Version mit Developer ID-Zertifikat signiert und von Apple notarisiert — keine Gatekeeper-Warnung mehr beim ersten Start
+- Automatischer Homebrew-Cask-Bump (bei vorhandenem Token)
+
+### Behoben
+- Sparkle-Signatur im AppCast entspricht jetzt exakt dem finalen (gestapelten) DMG
+
 ## 0.1.1 – 2026-09-13
 
 ### Neu
