@@ -76,9 +76,11 @@ jobs:
         if: env.MACOS_CERTIFICATE != ''
         run: |
           APP="${{ steps.app.outputs.path }}"
-          # Verschachtelte Sparkle-Komponenten zuerst, dann die App
-          find "$APP/Contents" -name "*.framework" -o -name "*.app" -o -name "*.xpc" | while read -r BUNDLE; do
+          # Innerste Bundles zuerst (-depth), dann die App; Entitlements der
+          # Sparkle-Komponenten bleiben erhalten
+          find "$APP/Contents" -depth \( -name "*.framework" -o -name "*.app" -o -name "*.xpc" \) | while read -r BUNDLE; do
             codesign --force --options runtime --timestamp \
+              --preserve-metadata=entitlements \
               --sign "Developer ID Application" "$BUNDLE"
           done
           codesign --force --options runtime --timestamp \
@@ -86,6 +88,7 @@ jobs:
             --entitlements "$(pwd)/OllaStat/App/OllaStat.entitlements" \
             "$APP"
           codesign --verify --strict --verbose=2 "$APP"
+          codesign --verify --deep --strict "$APP"
 
       - name: Assemble DMG
         run: |
