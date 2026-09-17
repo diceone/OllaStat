@@ -6,12 +6,12 @@
     <description>Ollama Cloud Token-Verbrauch in der macOS-Menüleiste</description>
     <language>de</language>
     <item>
-      <title>Version 0.1.1</title>
-      <pubDate>Sun, 13 Sep 2026 16:01:27 +0000</pubDate>
-      <sparkle:version>2</sparkle:version>
-      <sparkle:shortVersionString>0.1.1</sparkle:shortVersionString>
+      <title>Version 0.1.2</title>
+      <pubDate>Thu, 17 Sep 2026 17:02:39 +0000</pubDate>
+      <sparkle:version>3</sparkle:version>
+      <sparkle:shortVersionString>0.1.2</sparkle:shortVersionString>
       <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-      <enclosure url="https://github.com/diceone/OllaStat/releases/download/v0.1.1/OllaStat-0.1.1.dmg" length="1764472" type="application/x-bzip2-diskimage" sparkle:edSignature="NGPNcVgY6lTblSMYtbdn/2+IDtqMwx2YmZ/WhIitLl1aOfzwbcNCFYZUthuS1E8FjsMOMtjDbF3ZuMtGvnAuCQ==" />
+      <enclosure url="https://github.com/diceone/OllaStat/releases/download/v0.1.2/OllaStat-0.1.2.dmg" length="1827746" type="application/x-bzip2-diskimage" sparkle:edSignature="gc4z0cIkRKZkCdWLecRBO+CV3sB9+qj07oxmS9uIK0EKAYfIWQE+9/yUlIeKLjzGfL/2q2GLkfNbstDiAz9aAA==" />
     </item>
   </channel>
 </rss>
