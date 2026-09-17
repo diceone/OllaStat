@@ -76,13 +76,19 @@ jobs:
         if: env.MACOS_CERTIFICATE != ''
         run: |
           APP="${{ steps.app.outputs.path }}"
-          # --deep signiert auch verschachtelte nackte Binaries (z. B. Sparkles
-          # Autoupdate), die per find *.framework/*.app/*.xpc nicht erfasst
-          # würden; --preserve-metadata=entitlements bewahrt die Entitlements
-          # der Sparkle-Komponenten
+          # --deep erfasst auch nackte Binaries im Framework (z. B. Sparkles
+          # Autoupdate); Entitlements der Sparkle-Komponenten bleiben erhalten
           codesign --force --deep --options runtime --timestamp \
             --preserve-metadata=entitlements \
-            --sign "Developer ID Application" "$APP"
+            --sign "Developer ID Application" \
+            "$APP/Contents/Frameworks/Sparkle.framework"
+          # App mit unseren (leeren) Entitlements signieren — ersetzt das vom
+          # Build injizierte Debug-Entitlement get-task-allow (notarisiert
+          # nicht erlaubt)
+          codesign --force --options runtime --timestamp \
+            --sign "Developer ID Application" \
+            --entitlements "$(pwd)/OllaStat/App/OllaStat.entitlements" \
+            "$APP"
           codesign --verify --strict --verbose=2 "$APP"
           codesign --verify --deep --strict "$APP"
 
